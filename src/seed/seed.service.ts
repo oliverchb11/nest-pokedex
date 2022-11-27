@@ -1,14 +1,22 @@
 import { Injectable } from '@nestjs/common';
-import axios, { AxiosInstance } from 'axios';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { AxiosAdapter } from 'src/common/adepters/axios.adapter';
+import { Pokemon } from 'src/pokemon/entities/pokemon.entity';
 import { ResponsePokedex } from './interfaces/response-pokedes';
 
 @Injectable()
 export class SeedService {
-  private readonly axios: AxiosInstance = axios;
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  constructor(
+    @InjectModel(Pokemon.name) private readonly pokemonModel: Model<Pokemon>,
+    private readonly http: AxiosAdapter,
+  ) {}
 
   async executeSeed() {
-    const { data } = await this.axios.get<ResponsePokedex>(
-      'https://pokeapi.co/api/v2/pokemon?limit=100',
+    await this.pokemonModel.deleteMany({});
+    const data = await this.http.get<ResponsePokedex>(
+      'https://pokeapi.co/api/v2/pokemon?limit=650',
     );
 
     const modificData = data.results.map((value) => {
@@ -18,6 +26,7 @@ export class SeedService {
       object.no = numero;
       return object;
     });
-    return modificData;
+    await this.pokemonModel.create(modificData);
+    return 'Seed Executed';
   }
 }
